@@ -1,0 +1,503 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PPL PNG to Mesh Converter</title>
+<style>
+  :root {
+    --bg: #0a0a0a;
+    --fg: #e0e0e0;
+    --border: #404040;
+    --accent: #ffffff;
+    --panel: #141414;
+    --btn: #2a2a2a;
+    --btn-hover: #404040;
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+
+  body {
+    background-color: var(--bg);
+    color: var(--fg);
+    font-family: Consolas, "Courier New", monospace;
+    font-size: 14px;
+    margin: 0;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+  }
+
+  h1 {
+    font-size: 18px;
+    font-weight: normal;
+    text-transform: uppercase;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 10px;
+    margin-top: 0;
+    margin-bottom: 20px;
+    color: var(--accent);
+  }
+
+  .layout {
+    display: flex;
+    gap: 20px;
+    flex: 1;
+    min-height: 0;
+  }
+
+  .sidebar {
+    width: 320px;
+    background-color: var(--panel);
+    border: 1px solid var(--border);
+    padding: 15px;
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    overflow-y: auto;
+  }
+
+  .main-area {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    min-width: 0;
+  }
+
+  .control-group {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+  }
+
+  .control-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  label {
+    user-select: none;
+  }
+
+  input[type="number"],
+  input[type="file"],
+  select {
+    background-color: var(--bg);
+    color: var(--fg);
+    border: 1px solid var(--border);
+    font-family: inherit;
+    font-size: inherit;
+    padding: 4px 8px;
+    outline: none;
+    width: 100%;
+  }
+
+  input[type="number"] {
+    width: 120px;
+  }
+
+  input[type="checkbox"] {
+    appearance: none;
+    background-color: var(--bg);
+    border: 1px solid var(--border);
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+    position: relative;
+  }
+
+  input[type="checkbox"]:checked::after {
+    content: "";
+    position: absolute;
+    top: 3px;
+    left: 3px;
+    width: 8px;
+    height: 8px;
+    background-color: var(--accent);
+  }
+
+  button {
+    background-color: var(--btn);
+    color: var(--fg);
+    border: 1px solid var(--border);
+    font-family: inherit;
+    font-size: inherit;
+    padding: 8px;
+    cursor: pointer;
+    text-transform: uppercase;
+    transition: background-color 0.1s;
+  }
+
+  button:hover {
+    background-color: var(--btn-hover);
+  }
+
+  button:active {
+    background-color: var(--accent);
+    color: var(--bg);
+  }
+
+  button:disabled {
+    background-color: var(--bg);
+    color: #555;
+    cursor: not-allowed;
+    border-color: #222;
+  }
+
+  .preview-box {
+    border: 1px solid var(--border);
+    background: url('data:image/svg+xml;utf8,<svg width="20" height="20" xmlns="http://www.w3.org/2000/svg"><rect width="10" height="10" fill="%231a1a1a"/><rect x="10" y="10" width="10" height="10" fill="%231a1a1a"/><rect x="10" width="10" height="10" fill="%23222"/><rect y="10" width="10" height="10" fill="%23222"/></svg>');
+    height: 200px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+  }
+
+  #image-preview {
+    max-width: 100%;
+    max-height: 100%;
+    image-rendering: pixelated;
+  }
+
+  textarea {
+    flex: 1;
+    background-color: var(--panel);
+    color: var(--accent);
+    border: 1px solid var(--border);
+    font-family: inherit;
+    font-size: 13px;
+    padding: 10px;
+    resize: none;
+    outline: none;
+    white-space: pre;
+    overflow: auto;
+  }
+
+  .status {
+    font-size: 12px;
+    color: #888;
+    margin-top: 10px;
+  }
+
+  .external-link {
+    color: var(--accent);
+    text-decoration: none;
+    border-bottom: 1px dashed var(--border);
+    display: inline-block;
+    margin-top: 5px;
+  }
+  
+  .external-link:hover {
+    border-bottom-color: var(--accent);
+  }
+</style>
+</head>
+<body>
+
+<h1>PPL PNG to Mesh Converter</h1>
+
+<div class="layout">
+  <div class="sidebar">
+    <div class="preview-box">
+      <img id="image-preview" src="" alt="No Image Selected" style="display: none;">
+    </div>
+    
+    <div class="control-group">
+      <label>Select PNG File</label>
+      <input type="file" id="file-input" accept="image/png">
+    </div>
+
+    <div class="control-group">
+      <div class="control-row">
+        <label title="Scales down large images to prevent crashing the game">Max Resolution</label>
+        <input type="number" id="opt-max-res" value="64" min="8" max="512">
+      </div>
+    </div>
+
+    <div class="control-group">
+      <div class="control-row">
+        <label title="Size multiplier for each pixel">Scale</label>
+        <input type="number" id="opt-scale" value="1" step="0.1">
+      </div>
+    </div>
+
+    <div class="control-group">
+      <div class="control-row">
+        <label title="Skip pixels with alpha below this (0-255)">Alpha Threshold</label>
+        <input type="number" id="opt-alpha" value="128" min="1" max="255">
+      </div>
+    </div>
+    
+    <div class="control-group">
+      <div class="control-row">
+        <label title="Scales the final transparency to prevent additive blending blowout">Output Alpha (0-255)</label>
+        <input type="number" id="opt-out-alpha" value="80" min="0" max="255">
+      </div>
+    </div>
+
+    <div class="control-group">
+      <div class="control-row">
+        <label title="Base Z coordinate">Z Offset</label>
+        <input type="number" id="opt-z" value="0" step="1">
+      </div>
+    </div>
+
+    <div class="control-group">
+      <div class="control-row">
+        <label title="Shape to generate per pixel">Geometry Mode</label>
+        <select id="opt-mode">
+          <option value="square">Square (Wireframe)</option>
+          <option value="cross">Cross (X)</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="control-group">
+      <div class="control-row">
+        <label title="Align the mesh center to {0,0,0}">Center Origin</label>
+        <input type="checkbox" id="opt-center" checked>
+      </div>
+    </div>
+
+    <div class="control-group">
+      <div class="control-row">
+        <label title="Invert Y axis to match Cartesian coords">Invert Y Axis</label>
+        <input type="checkbox" id="opt-invert-y" checked>
+      </div>
+    </div>
+
+    <button id="btn-convert">Generate Lua Mesh</button>
+    <div id="status-text" class="status">Waiting for input...</div>
+    
+    <div class="status" style="margin-top: 15px;">
+      <a href="https://pewpewlive.github.io" target="_blank" class="external-link">Launch Level Authoring &rarr;</a>
+    </div>
+  </div>
+
+  <div class="main-area">
+    <textarea id="output-code" readonly placeholder="meshes = {}"></textarea>
+    <button id="btn-copy">Copy to Clipboard</button>
+  </div>
+</div>
+
+<script>
+  const fileInput = document.getElementById('file-input');
+  const imagePreview = document.getElementById('image-preview');
+  const btnConvert = document.getElementById('btn-convert');
+  const btnCopy = document.getElementById('btn-copy');
+  const outputCode = document.getElementById('output-code');
+  const statusText = document.getElementById('status-text');
+
+  let currentImage = null;
+  let worker = null;
+
+  fileInput.addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      const url = URL.createObjectURL(file);
+      imagePreview.src = url;
+      imagePreview.style.display = 'block';
+      
+      currentImage = new Image();
+      currentImage.onload = () => {
+        statusText.innerText = `Loaded: ${currentImage.width}x${currentImage.height}px`;
+      };
+      currentImage.src = url;
+    }
+  });
+
+  btnCopy.addEventListener('click', () => {
+    outputCode.select();
+    document.execCommand('copy');
+    const oldText = btnCopy.innerText;
+    btnCopy.innerText = "COPIED!";
+    setTimeout(() => btnCopy.innerText = oldText, 2000);
+  });
+
+  const workerCode = `
+  self.onmessage = function(e) {
+    const { imgData, width, height, scale, alphaThreshold, outputAlpha, zOffset, mode, centerOrigin, invertY } = e.data;
+    
+    function toPewPewColor(r, g, b, a) {
+      const hex = (r << 24 | g << 16 | b << 8 | a) >>> 0;
+      return "0x" + hex.toString(16).padStart(8, '0');
+    }
+
+    let offsetX = centerOrigin ? (width * scale) / 2 : 0;
+    let offsetY = centerOrigin ? (height * scale) / 2 : 0;
+
+    let luaChunks = [];
+    luaChunks.push("meshes = {\\n  {\\n    vertexes = {");
+    
+    let hasPixels = false;
+    let firstV = true;
+    for (let y = 0; y < height; y++) {
+      let rowStr = "";
+      for (let x = 0; x < width; x++) {
+        const idx = (y * width + x) * 4;
+        if (imgData[idx + 3] >= alphaThreshold) {
+          let px = (x * scale) - offsetX;
+          let py = (y * scale) - offsetY;
+          if (invertY) py = -py;
+          
+          let ySign = invertY ? -1 : 1;
+          let py2 = py + (scale * ySign);
+          let px2 = px + scale;
+          
+          if (!firstV) rowStr += ",";
+          
+          if (mode === 'square') {
+              rowStr += "{" + px + "," + py + "," + zOffset + "},{" + px2 + "," + py + "," + zOffset + "},{" + px2 + "," + py2 + "," + zOffset + "},{" + px + "," + py2 + "," + zOffset + "}";
+          } else if (mode === 'cross') {
+              rowStr += "{" + px + "," + py + "," + zOffset + "},{" + px2 + "," + py2 + "," + zOffset + "},{" + px2 + "," + py + "," + zOffset + "},{" + px + "," + py2 + "," + zOffset + "}";
+          }
+          firstV = false;
+          hasPixels = true;
+        }
+      }
+      if (rowStr.length > 0) luaChunks.push(rowStr);
+      if (y % 100 === 0) self.postMessage({ type: 'progress', percent: (y / height) * 0.33 });
+    }
+    
+    if (!hasPixels) {
+       self.postMessage({ type: 'done', result: "meshes = {\\n  {\\n    vertexes = {},\\n    colors = {},\\n    segments = {}\\n  }\\n}" });
+       return;
+    }
+    
+    luaChunks.push("},\\n    colors = {");
+    
+    let firstC = true;
+    for (let y = 0; y < height; y++) {
+      let rowStr = "";
+      for (let x = 0; x < width; x++) {
+        const idx = (y * width + x) * 4;
+        const a = imgData[idx + 3];
+        if (a >= alphaThreshold) {
+          const r = imgData[idx];
+          const g = imgData[idx + 1];
+          const b = imgData[idx + 2];
+          
+          // Multiply the base alpha by our output transparency scalar
+          const finalA = Math.max(0, Math.min(255, Math.floor(a * (outputAlpha / 255))));
+          const colorHex = toPewPewColor(r, g, b, finalA);
+          
+          if (!firstC) rowStr += ",";
+          rowStr += colorHex + "," + colorHex + "," + colorHex + "," + colorHex;
+          firstC = false;
+        }
+      }
+      if (rowStr.length > 0) luaChunks.push(rowStr);
+      if (y % 100 === 0) self.postMessage({ type: 'progress', percent: 0.33 + (y / height) * 0.33 });
+    }
+    
+    luaChunks.push("},\\n    segments = {");
+    
+    let firstS = true;
+    let vertexIndex = 0;
+    for (let y = 0; y < height; y++) {
+      let rowStr = "";
+      for (let x = 0; x < width; x++) {
+        const idx = (y * width + x) * 4;
+        const a = imgData[idx + 3];
+        if (a >= alphaThreshold) {
+          if (!firstS) rowStr += ",";
+          if (mode === 'square') {
+              let v1 = vertexIndex;
+              let v2 = vertexIndex + 1;
+              let v3 = vertexIndex + 2;
+              let v4 = vertexIndex + 3;
+              rowStr += "{" + v1 + "," + v2 + "," + v3 + "," + v4 + "," + v1 + "}";
+          } else if (mode === 'cross') {
+              let v1 = vertexIndex;
+              let v2 = vertexIndex + 1;
+              let v3 = vertexIndex + 2;
+              let v4 = vertexIndex + 3;
+              rowStr += "{" + v1 + "," + v2 + "},{" + v3 + "," + v4 + "}";
+          }
+          vertexIndex += 4;
+          firstS = false;
+        }
+      }
+      if (rowStr.length > 0) luaChunks.push(rowStr);
+      if (y % 100 === 0) self.postMessage({ type: 'progress', percent: 0.66 + (y / height) * 0.33 });
+    }
+    
+    luaChunks.push("}\\n  }\\n}");
+    
+    self.postMessage({ type: 'progress', percent: 1.0 });
+    const finalString = luaChunks.join('');
+    self.postMessage({ type: 'done', result: finalString });
+  };
+  `;
+
+  btnConvert.addEventListener('click', () => {
+    if (!currentImage) {
+      statusText.innerText = "Error: Please select a PNG first.";
+      return;
+    }
+
+    btnConvert.disabled = true;
+    statusText.innerText = "Processing: 0%";
+    
+    const scale = parseFloat(document.getElementById('opt-scale').value);
+    const alphaThreshold = parseInt(document.getElementById('opt-alpha').value);
+    const outputAlpha = parseInt(document.getElementById('opt-out-alpha').value);
+    const zOffset = parseFloat(document.getElementById('opt-z').value);
+    const mode = document.getElementById('opt-mode').value;
+    const centerOrigin = document.getElementById('opt-center').checked;
+    const invertY = document.getElementById('opt-invert-y').checked;
+    const maxRes = parseInt(document.getElementById('opt-max-res').value) || 64;
+
+    let targetWidth = currentImage.width;
+    let targetHeight = currentImage.height;
+    
+    if (targetWidth > maxRes || targetHeight > maxRes) {
+      const ratio = Math.min(maxRes / targetWidth, maxRes / targetHeight);
+      targetWidth = Math.max(1, Math.floor(targetWidth * ratio));
+      targetHeight = Math.max(1, Math.floor(targetHeight * ratio));
+    }
+
+    const canvas = document.createElement('canvas');
+    canvas.width = targetWidth;
+    canvas.height = targetHeight;
+    const ctx = canvas.getContext('2d');
+    
+    ctx.imageSmoothingEnabled = false; 
+    ctx.drawImage(currentImage, 0, 0, targetWidth, targetHeight);
+    const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+
+    if (worker) {
+      worker.terminate();
+    }
+    
+    const blob = new Blob([workerCode], { type: 'application/javascript' });
+    worker = new Worker(URL.createObjectURL(blob));
+    
+    worker.onmessage = function(e) {
+      if (e.data.type === 'progress') {
+        const pct = Math.floor(e.data.percent * 100);
+        statusText.innerText = `Processing: ${pct}%`;
+      } else if (e.data.type === 'done') {
+        outputCode.value = e.data.result;
+        statusText.innerText = `Complete. Output generated from ${targetWidth}x${targetHeight} matrix.`;
+        btnConvert.disabled = false;
+      }
+    };
+    
+    worker.postMessage({
+      imgData: imgData,
+      width: canvas.width,
+      height: canvas.height,
+      scale, alphaThreshold, outputAlpha, zOffset, mode, centerOrigin, invertY
+    });
+  });
+</script>
+
+</body>
+</html>
